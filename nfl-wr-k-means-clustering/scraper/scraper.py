@@ -5,6 +5,7 @@ from sklearn.impute import KNNImputer
 from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.cluster.vq import vq, kmeans
 
 # combine_data = None
 combine_data_types = {
@@ -85,4 +86,12 @@ combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
 # sns.scatterplot(data=combine_data_imputed, x="PC1", y="PC2")
 # plt.show()
 
+# get clusters
+k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2"]], 5)
 
+# add cluster col to data
+combine_data_imputed["cluster"] = (
+    vq(combine_data_imputed[["PC1", "PC2"]], k_means_fit_data[0])[0]
+)
+
+combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_clusters.csv", index=False)
