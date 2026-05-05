@@ -2,6 +2,9 @@ import os
 import pandas as pd
 import nflreadpy as nfl
 from sklearn.impute import KNNImputer
+from sklearn.decomposition import PCA
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # combine_data = None
 combine_data_types = {
@@ -56,3 +59,30 @@ else:
     combine_data_imputed.to_csv(combine_data_imputed_path, index=False)
 
 print(combine_data_imputed.describe())
+
+# scale data and run PCA
+
+combine_data_imputed_scaled = (
+    combine_data_imputed[cols_to_impute] - \
+    combine_data_imputed[cols_to_impute].mean()) / \
+    combine_data_imputed[cols_to_impute].std() 
+
+pca = PCA(svd_solver="full")
+pca_fit = pca.fit_transform(combine_data_imputed_scaled)
+
+# rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
+# print(rotation)
+# print(f"Explained variance: {pca.explained_variance_}")
+# pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
+# print(f"Percent variance for each axis: {pca_percent_py}")
+
+#access PCs
+pca_fit_data = pd.DataFrame(pca_fit)
+pca_fit_data.columns = ["PC" + str(i + 1) for i in range(len(pca_fit_data.columns))]
+
+combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
+
+# sns.scatterplot(data=combine_data_imputed, x="PC1", y="PC2")
+# plt.show()
+
+
