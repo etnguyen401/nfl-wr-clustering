@@ -22,7 +22,7 @@ else:
     combine_data = nfl.load_combine().to_pandas()
 
     #filter for only wide receivers
-    combine_data = combine_data.loc[(combine_data["pos"] == "WR")]
+    combine_data = combine_data.loc[(combine_data["pos"] == "WR")].reset_index(drop=True)
     #split height into feet and inches
     combine_data[["ht-ft", "ht-in"]] = combine_data["ht"].str.split("-", expand=True)
 
@@ -50,7 +50,7 @@ else:
     # temp data frame with non-imputed cols
     temp_data = combine_data.drop(cols_to_impute, axis=1)
 
-    imputer = KNNImputer(n_neighbors=10)
+    imputer = KNNImputer(n_neighbors=5)
 
     knn_output = imputer.fit_transform(combine_data[cols_to_impute])
 
@@ -71,11 +71,11 @@ combine_data_imputed_scaled = (
 pca = PCA(svd_solver="full")
 pca_fit = pca.fit_transform(combine_data_imputed_scaled)
 
-# rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
-# print(rotation)
-# print(f"Explained variance: {pca.explained_variance_}")
-# pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
-# print(f"Percent variance for each axis: {pca_percent_py}")
+rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
+print(rotation)
+print(f"Explained variance: {pca.explained_variance_}")
+pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
+print(f"Percent variance for each axis: {pca_percent_py}")
 
 #access PCs
 pca_fit_data = pd.DataFrame(pca_fit)
@@ -87,7 +87,7 @@ combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
 # plt.show()
 
 # get clusters
-k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2"]], 5)
+k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2"]], 4, seed=1234)
 
 # add cluster col to data
 combine_data_imputed["cluster"] = (
