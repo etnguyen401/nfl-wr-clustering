@@ -72,7 +72,7 @@ pca = PCA(svd_solver="full")
 pca_fit = pca.fit_transform(combine_data_imputed_scaled)
 
 rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
-print(rotation)
+print(f"Rotation matrix:\n{rotation}")
 print(f"Explained variance: {pca.explained_variance_}")
 pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
 print(f"Percent variance for each axis: {pca_percent_py}")
@@ -95,3 +95,12 @@ combine_data_imputed["cluster"] = (
 )
 
 combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_clusters.csv", index=False)
+
+sns.scatterplot(
+    data=combine_data_imputed,
+    x="PC1",
+    y="PC2",
+    hue="cluster",
+    palette="colorblind",
+)
+plt.show()
