@@ -50,7 +50,7 @@ else:
     # temp data frame with non-imputed cols
     temp_data = combine_data.drop(cols_to_impute, axis=1)
 
-    imputer = KNNImputer(n_neighbors=5)
+    imputer = KNNImputer(n_neighbors=5, weights="distance")
 
     knn_output = imputer.fit_transform(combine_data[cols_to_impute])
 
