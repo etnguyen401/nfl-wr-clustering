@@ -1,7 +1,10 @@
 import os
 import pandas as pd
 import nflreadpy as nfl
-from sklearn.impute import KNNImputer
+# from sklearn.impute import KNNImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -50,13 +53,20 @@ else:
     # temp data frame with non-imputed cols
     temp_data = combine_data.drop(cols_to_impute, axis=1)
 
-    imputer = KNNImputer(n_neighbors=5, weights="distance")
+    # imputer = KNNImputer(n_neighbors=5, weights="distance")
 
-    knn_output = imputer.fit_transform(combine_data[cols_to_impute])
+    # knn_output = imputer.fit_transform(combine_data[cols_to_impute])
 
-    knn_output_df = pd.DataFrame(knn_output, columns=cols_to_impute)
+    imputer = IterativeImputer(
+        estimator=RandomForestRegressor(n_estimators=100, random_state=1234),
+        max_iter=10,
+        random_state=1234
+    )
 
-    combine_data_imputed = pd.concat([temp_data, knn_output_df], axis=1)
+    output = imputer.fit_transform(combine_data[cols_to_impute])
+    output_df = pd.DataFrame(output, columns=cols_to_impute)
+
+    combine_data_imputed = pd.concat([temp_data, output_df], axis=1)
     combine_data_imputed.to_csv(combine_data_imputed_path, index=False)
 
 print(combine_data_imputed.describe())
@@ -103,4 +113,5 @@ sns.scatterplot(
     hue="cluster",
     palette="colorblind",
 )
+
 plt.show()
