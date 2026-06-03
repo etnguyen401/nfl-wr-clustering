@@ -3,6 +3,7 @@ import pandas as pd
 import nflreadpy as nfl
 from sklearn.impute import KNNImputer
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.vq import vq, kmeans
@@ -51,8 +52,11 @@ else:
     temp_data = combine_data.drop(cols_to_impute, axis=1)
 
     imputer = KNNImputer(n_neighbors=5, weights="distance")
+    #scale data
+    scaler = StandardScaler()
+    combine_data_scaled = scaler.fit_transform(combine_data[cols_to_impute])
 
-    knn_output = imputer.fit_transform(combine_data[cols_to_impute])
+    knn_output = imputer.fit_transform(combine_data_scaled)
 
     knn_output_df = pd.DataFrame(knn_output, columns=cols_to_impute)
 
@@ -63,13 +67,16 @@ print(combine_data_imputed.describe())
 
 # scale data and run PCA
 
-combine_data_imputed_scaled = (
-    combine_data_imputed[cols_to_impute] - \
-    combine_data_imputed[cols_to_impute].mean()) / \
-    combine_data_imputed[cols_to_impute].std() 
+# combine_data_imputed_scaled = (
+#     combine_data_imputed[cols_to_impute] - \
+#     combine_data_imputed[cols_to_impute].mean()) / \
+#     combine_data_imputed[cols_to_impute].std() 
+
+# scaler = StandardScaler()
+# combine_data_imputed_scaled = scaler.fit_transform(combine_data_imputed[cols_to_impute])
 
 pca = PCA(svd_solver="full")
-pca_fit = pca.fit_transform(combine_data_imputed_scaled)
+pca_fit = pca.fit_transform(combine_data_imputed[cols_to_impute])
 
 rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
 print(f"Rotation matrix:\n{rotation}")
@@ -83,7 +90,7 @@ pca_fit_data.columns = ["PC" + str(i + 1) for i in range(len(pca_fit_data.column
 
 combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
 
-# sns.scatterplot(data=combine_data_imputed, x="PC1", y="PC2")
+# sns.scatterplot(data=combine_data_imputed_scaled, x="PC1", y="PC2")
 # plt.show()
 
 # get clusters
@@ -103,4 +110,5 @@ sns.scatterplot(
     hue="cluster",
     palette="colorblind",
 )
+plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
 plt.show()
