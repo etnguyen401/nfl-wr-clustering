@@ -44,6 +44,7 @@ print(combine_data.describe())
 #fill in missing values in combine data
 combine_data_imputed_path = "data/combine_data_wr_post_clean_imputed.csv"
 cols_to_impute = ["ht", "wt", "forty", "vertical", "bench", "broad_jump", "cone", "shuttle"]
+cols_to_impute_scaled = [col + "_scaled" for col in cols_to_impute]
 
 if (os.path.exists(combine_data_imputed_path)):
     combine_data_imputed = pd.read_csv(combine_data_imputed_path)
@@ -52,28 +53,23 @@ else:
     temp_data = combine_data.drop(cols_to_impute, axis=1)
 
     imputer = KNNImputer(n_neighbors=5, weights="distance")
+    
     #scale data
     scaler = StandardScaler()
     combine_data_scaled = scaler.fit_transform(combine_data[cols_to_impute])
 
-    knn_output = imputer.fit_transform(combine_data_scaled)
+    # impute scaled data
+    knn_output_scaled = imputer.fit_transform(combine_data_scaled)
+    knn_output_scaled_df = pd.DataFrame(knn_output_scaled, columns=cols_to_impute_scaled)
 
-    knn_output_df = pd.DataFrame(knn_output, columns=cols_to_impute)
+    #inverse scaled imputed data back to orignal scale
+    knn_output_og = scaler.inverse_transform(knn_output_scaled)
+    knn_output_og_df = pd.DataFrame(knn_output_og, columns=cols_to_impute)
 
-    combine_data_imputed = pd.concat([temp_data, knn_output_df], axis=1)
+    combine_data_imputed = pd.concat([temp_data, knn_output_og_df, knn_output_scaled_df], axis=1)
     combine_data_imputed.to_csv(combine_data_imputed_path, index=False)
 
 print(combine_data_imputed.describe())
-
-# scale data and run PCA
-
-# combine_data_imputed_scaled = (
-#     combine_data_imputed[cols_to_impute] - \
-#     combine_data_imputed[cols_to_impute].mean()) / \
-#     combine_data_imputed[cols_to_impute].std() 
-
-# scaler = StandardScaler()
-# combine_data_imputed_scaled = scaler.fit_transform(combine_data_imputed[cols_to_impute])
 
 pca = PCA(svd_solver="full")
 pca_fit = pca.fit_transform(combine_data_imputed[cols_to_impute])
