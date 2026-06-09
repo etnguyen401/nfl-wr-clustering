@@ -6,6 +6,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.vq import vq, kmeans
@@ -46,6 +47,7 @@ print(combine_data.describe())
 #fill in missing values in combine data
 combine_data_imputed_path = "data/combine_data_wr_post_clean_imputed.csv"
 cols_to_impute = ["ht", "wt", "forty", "vertical", "bench", "broad_jump", "cone", "shuttle"]
+cols_to_impute_scaled = [col + "_scaled" for col in cols_to_impute]
 
 if (os.path.exists(combine_data_imputed_path)):
     combine_data_imputed = pd.read_csv(combine_data_imputed_path)
@@ -55,33 +57,33 @@ else:
 
     # imputer = KNNImputer(n_neighbors=5, weights="distance")
 
-    # knn_output = imputer.fit_transform(combine_data[cols_to_impute])
-
     imputer = IterativeImputer(
         estimator=RandomForestRegressor(n_estimators=100, random_state=1234),
         max_iter=10,
         random_state=1234
     )
 
-    output = imputer.fit_transform(combine_data[cols_to_impute])
-    output_df = pd.DataFrame(output, columns=cols_to_impute)
+    #scale data
+    scaler = StandardScaler()
+    combine_data_scaled = scaler.fit_transform(combine_data[cols_to_impute])
 
-    combine_data_imputed = pd.concat([temp_data, output_df], axis=1)
+    # impute scaled data
+    output_scaled = imputer.fit_transform(combine_data_scaled)
+    output_scaled_df = pd.DataFrame(output_scaled, columns=cols_to_impute_scaled)
+
+    #inverse scaled imputed data back to orignal scale
+    output_og = scaler.inverse_transform(output_scaled)
+    output_og_df = pd.DataFrame(output_og, columns=cols_to_impute)
+
+    combine_data_imputed = pd.concat([temp_data, output_og_df, output_scaled_df], axis=1)
     combine_data_imputed.to_csv(combine_data_imputed_path, index=False)
 
 print(combine_data_imputed.describe())
 
-# scale data and run PCA
-
-combine_data_imputed_scaled = (
-    combine_data_imputed[cols_to_impute] - \
-    combine_data_imputed[cols_to_impute].mean()) / \
-    combine_data_imputed[cols_to_impute].std() 
-
 pca = PCA(svd_solver="full")
-pca_fit = pca.fit_transform(combine_data_imputed_scaled)
+pca_fit = pca.fit_transform(combine_data_imputed[cols_to_impute_scaled])
 
-rotation = pd.DataFrame(pca.components_, index=cols_to_impute)
+rotation = pd.DataFrame(pca.components_, index=cols_to_impute_scaled)
 print(f"Rotation matrix:\n{rotation}")
 print(f"Explained variance: {pca.explained_variance_}")
 pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
@@ -93,7 +95,7 @@ pca_fit_data.columns = ["PC" + str(i + 1) for i in range(len(pca_fit_data.column
 
 combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
 
-# sns.scatterplot(data=combine_data_imputed, x="PC1", y="PC2")
+# sns.scatterplot(data=combine_data_imputed_scaled, x="PC1", y="PC2")
 # plt.show()
 
 # get clusters
@@ -113,5 +115,5 @@ sns.scatterplot(
     hue="cluster",
     palette="colorblind",
 )
-
+plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
 plt.show()
