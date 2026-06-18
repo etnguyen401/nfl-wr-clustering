@@ -1,4 +1,5 @@
 import os
+from turtle import color
 import pandas as pd
 import nflreadpy as nfl
 # from sklearn.impute import KNNImputer
@@ -10,12 +11,13 @@ from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.vq import vq, kmeans
+import plotly.express as px
 
 # combine_data = None
 combine_data_types = {
-        "wt": float, "forty": float, "vertical": float, "bench": float,
-        "broad_jump": float, "cone": float, "shuttle": float,
-        "ht-ft": float, "ht-in": float
+    "wt": float, "forty": float, "vertical": float, "bench": float,
+    "broad_jump": float, "cone": float, "shuttle": float,
+    "ht-ft": float, "ht-in": float
 }
 
 if (os.path.exists("data/combine_data_wr_post_clean.csv")):
@@ -108,12 +110,51 @@ combine_data_imputed["cluster"] = (
 
 combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_clusters.csv", index=False)
 
-sns.scatterplot(
-    data=combine_data_imputed,
+# sns.scatterplot(
+#     data=combine_data_imputed,
+#     x="PC1",
+#     y="PC2",
+#     hue="cluster",
+#     palette="colorblind",
+# )
+
+# plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
+# plt.show()
+
+fig = px.scatter(
+    combine_data_imputed,
     x="PC1",
     y="PC2",
-    hue="cluster",
-    palette="colorblind",
+    title="PCA of NFL WR Combine Data with K-Means Clusters",
+    color="cluster",
+    hover_name="player_name",
+    hover_data={
+        "PC1": False,
+        "PC2": False,
+        "cluster": False,
+        "ht": ":.2f",
+        "wt": ":.2f",
+        "forty": ":.2f",
+        "vertical": ":.2f",
+        "bench": ":.2f",
+        "broad_jump": ":.2f",
+        "cone": ":.2f",
+        "shuttle": ":.2f",
+    },
+    labels={
+        "PC1": f"PC1 ({pca_percent_py[0]:.2f}% variance)",
+        "PC2": f"PC2 ({pca_percent_py[1]:.2f}% variance)",
+    }
 )
-plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
-plt.show()
+
+fig.update_traces(
+    marker=dict(size=8, opacity=0.7)
+)
+fig.update_layout(
+    hoverlabel=dict(bgcolor='white', font_size=12),
+)
+
+fig.show()
+
+# Save as interactive HTML you can share
+fig.write_html("data/wr_clusters_interactive.html")
