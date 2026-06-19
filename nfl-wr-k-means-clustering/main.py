@@ -108,6 +108,8 @@ combine_data_imputed["cluster"] = (
     vq(combine_data_imputed[["PC1", "PC2"]], k_means_fit_data[0])[0]
 )
 
+combine_data_imputed["cluster"] = combine_data_imputed["cluster"].astype(str)
+
 combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_clusters.csv", index=False)
 
 # sns.scatterplot(
@@ -121,12 +123,15 @@ combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_cluster
 # plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
 # plt.show()
 
+cluster_values = sorted(combine_data_imputed["cluster"].unique())
+
 fig = px.scatter(
     combine_data_imputed,
     x="PC1",
     y="PC2",
     title="PCA of NFL WR Combine Data with K-Means Clusters",
     color="cluster",
+    category_orders={"cluster": cluster_values},
     hover_name="player_name",
     hover_data={
         "PC1": False,
@@ -156,5 +161,4 @@ fig.update_layout(
 
 fig.show()
 
-# Save as interactive HTML you can share
 fig.write_html("data/wr_clusters_interactive.html")
