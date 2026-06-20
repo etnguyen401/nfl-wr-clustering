@@ -82,20 +82,26 @@ else:
 
 print(combine_data_imputed.describe())
 
-pca = PCA(svd_solver="full")
+pca = PCA(n_components=4, svd_solver="full")
 pca_fit = pca.fit_transform(combine_data_imputed[cols_to_impute_scaled])
-
-rotation = pd.DataFrame(pca.components_, index=cols_to_impute_scaled)
-print(f"Rotation matrix:\n{rotation}")
-print(f"Explained variance: {pca.explained_variance_}")
-pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
-print(f"Percent variance for each axis: {pca_percent_py}")
 
 #access PCs
 pca_fit_data = pd.DataFrame(pca_fit)
 pca_fit_data.columns = ["PC" + str(i + 1) for i in range(len(pca_fit_data.columns))]
 
 combine_data_imputed = pd.concat([combine_data_imputed, pca_fit_data], axis=1)
+
+rotation = pd.DataFrame(
+    pca.components_.T,
+    columns=["PC1", "PC2", "PC3", "PC4"],
+    index=cols_to_impute_scaled,
+)
+
+print(f"Rotation matrix:\n{rotation}")
+print(f"Explained variance: {pca.explained_variance_}")
+pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
+print(f"Percent variance for each axis: {pca_percent_py}")
+
 
 # sns.scatterplot(data=combine_data_imputed_scaled, x="PC1", y="PC2")
 # plt.show()
