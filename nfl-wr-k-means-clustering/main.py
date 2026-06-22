@@ -107,11 +107,11 @@ print(f"Percent variance for each axis: {pca_percent_py}")
 # plt.show()
 
 # get clusters
-k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2"]], 4, seed=1234)
+k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]], 4, rng=1234)
 
 # add cluster col to data
 combine_data_imputed["cluster"] = (
-    vq(combine_data_imputed[["PC1", "PC2"]], k_means_fit_data[0])[0]
+    vq(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]], k_means_fit_data[0])[0]
 )
 
 combine_data_imputed["cluster"] = combine_data_imputed["cluster"].astype(str)
@@ -129,6 +129,12 @@ combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_cluster
 # plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
 # plt.show()
 
+#for each cluster, get average value of each PC and print it out
+print("Average values for each PC for each cluster:")
+print(combine_data_imputed.groupby("cluster")[["PC1", "PC2", "PC3", "PC4"]].mean().round(2))
+
+print("Average values for each feature for each cluster:")
+print(combine_data_imputed.groupby("cluster")[cols_to_impute].mean().round(2))
 cluster_values = sorted(combine_data_imputed["cluster"].unique())
 
 fig = px.scatter(
