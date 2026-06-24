@@ -12,6 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.cluster.vq import vq, kmeans
 import plotly.express as px
+import umap
 
 # combine_data = None
 combine_data_types = {
@@ -118,17 +119,6 @@ combine_data_imputed["cluster"] = combine_data_imputed["cluster"].astype(str)
 
 combine_data_imputed.to_csv("data/combine_data_wr_post_clean_imputed_pca_clusters.csv", index=False)
 
-# sns.scatterplot(
-#     data=combine_data_imputed,
-#     x="PC1",
-#     y="PC2",
-#     hue="cluster",
-#     palette="colorblind",
-# )
-
-# plt.savefig("data/pc1_pc2_clusters.png", dpi=300)
-# plt.show()
-
 #for each cluster, get average value of each PC and print it out
 print("Average values for each PC for each cluster:")
 print(combine_data_imputed.groupby("cluster")[["PC1", "PC2", "PC3", "PC4"]].mean().round(2))
@@ -137,17 +127,24 @@ print("Average values for each feature for each cluster:")
 print(combine_data_imputed.groupby("cluster")[cols_to_impute].mean().round(2))
 cluster_values = sorted(combine_data_imputed["cluster"].unique())
 
+# reduce dimensions of data using UMAP
+reducer = umap.UMAP(n_neighbors=15, min_dist=0.05, random_state=1234)
+umap_positions = reducer.fit_transform(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]])
+
+combine_data_imputed["UMAP1"] = umap_positions[:, 0]
+combine_data_imputed["UMAP2"] = umap_positions[:, 1]
+
 fig = px.scatter(
     combine_data_imputed,
-    x="PC1",
-    y="PC2",
-    title="PCA of NFL WR Combine Data with K-Means Clusters",
+    x="UMAP1",
+    y="UMAP2",
+    title="Wide Receiver Clusters (UMAP)",
     color="cluster",
     category_orders={"cluster": cluster_values},
     hover_name="player_name",
     hover_data={
-        "PC1": False,
-        "PC2": False,
+        "UMAP1": False,
+        "UMAP2": False,
         "cluster": False,
         "ht": ":.2f",
         "wt": ":.2f",
@@ -159,8 +156,8 @@ fig = px.scatter(
         "shuttle": ":.2f",
     },
     labels={
-        "PC1": f"PC1 ({pca_percent_py[0]:.2f}% variance)",
-        "PC2": f"PC2 ({pca_percent_py[1]:.2f}% variance)",
+        "UMAP1": "UMAP 1",
+        "UMAP2": "UMAP 2",
     }
 )
 
