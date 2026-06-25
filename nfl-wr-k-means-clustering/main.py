@@ -128,13 +128,13 @@ print(combine_data_imputed.groupby("cluster")[cols_to_impute].mean().round(2))
 cluster_values = sorted(combine_data_imputed["cluster"].unique())
 
 # reduce dimensions of data using UMAP
-reducer = umap.UMAP(n_neighbors=15, min_dist=0.05, random_state=1234)
+reducer = umap.UMAP(random_state=1234)
 umap_positions = reducer.fit_transform(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]])
 
 combine_data_imputed["UMAP1"] = umap_positions[:, 0]
 combine_data_imputed["UMAP2"] = umap_positions[:, 1]
 
-fig = px.scatter(
+umap_fig = px.scatter(
     combine_data_imputed,
     x="UMAP1",
     y="UMAP2",
@@ -161,13 +161,48 @@ fig = px.scatter(
     }
 )
 
-fig.update_traces(
-    marker=dict(size=8, opacity=0.7)
-)
-fig.update_layout(
-    hoverlabel=dict(bgcolor='white', font_size=12),
+pc1_pc2_comp = px.scatter(
+    combine_data_imputed,
+    x="PC1",
+    y="PC2",
+    title="Speed/Explosiveness vs Size/Frame (PC1 vs PC2)",
+    color="cluster",
+    category_orders={"cluster": cluster_values},
+    hover_name="player_name",
+    hover_data={
+        "PC1": False,
+        "PC2": False,
+        "cluster": False,
+        "ht": ":.2f",
+        "wt": ":.2f",
+        "forty": ":.2f",
+        "vertical": ":.2f",
+        "bench": ":.2f",
+        "broad_jump": ":.2f",
+        "cone": ":.2f",
+        "shuttle": ":.2f",
+    },
+    labels={
+        "PC1": "PC1 - Measure of Speed and Explosiveness",
+        "PC2": "PC2 - Measure of Size/Frame",
+    }
 )
 
-fig.show()
+umap_fig.update_traces(
+    marker=dict(size=8)
+)
 
-fig.write_html("data/wr_clusters_interactive.html")
+umap_fig.update_layout(
+    hoverlabel=dict(bgcolor='white'),
+)
+
+pc1_pc2_comp.update_traces(
+    marker=dict(size=7)
+)
+
+pc1_pc2_comp.update_layout(
+    hoverlabel=dict(bgcolor='white'),
+)
+
+umap_fig.write_html("data/wr_clusters_interactive_default.html")
+pc1_pc2_comp.write_html("data/wr_clusters_pc1_vs_pc2.html")
