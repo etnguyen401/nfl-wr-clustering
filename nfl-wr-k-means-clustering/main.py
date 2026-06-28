@@ -103,7 +103,6 @@ print(f"Explained variance: {pca.explained_variance_}")
 pca_percent_py = pca.explained_variance_ratio_.round(4) * 100
 print(f"Percent variance for each axis: {pca_percent_py}")
 
-
 # sns.scatterplot(data=combine_data_imputed_scaled, x="PC1", y="PC2")
 # plt.show()
 
@@ -114,6 +113,8 @@ k_means_fit_data = kmeans(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]], 4,
 combine_data_imputed["cluster"] = (
     vq(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]], k_means_fit_data[0])[0]
 )
+print("Cluster centers:")
+print(k_means_fit_data[0])
 
 combine_data_imputed["cluster"] = combine_data_imputed["cluster"].astype(str)
 
@@ -130,6 +131,7 @@ cluster_values = sorted(combine_data_imputed["cluster"].unique())
 # reduce dimensions of data using UMAP
 reducer = umap.UMAP(random_state=1234)
 umap_positions = reducer.fit_transform(combine_data_imputed[["PC1", "PC2", "PC3", "PC4"]])
+centers_umap = reducer.transform(k_means_fit_data[0])
 
 combine_data_imputed["UMAP1"] = umap_positions[:, 0]
 combine_data_imputed["UMAP2"] = umap_positions[:, 1]
@@ -158,7 +160,27 @@ umap_fig = px.scatter(
     labels={
         "UMAP1": "UMAP 1",
         "UMAP2": "UMAP 2",
+        
     }
+)
+
+umap_fig.update_traces(
+    marker=dict(size=8)
+)
+
+umap_fig.update_layout(
+    hoverlabel=dict(bgcolor='white'),
+)
+
+#add cluster centers to umap_fig
+umap_fig.add_scatter(
+    x=centers_umap[:, 0],
+    y=centers_umap[:, 1],
+    mode="markers",
+    marker=dict(size=16, color="black", symbol="star"),
+    name="Cluster Centers",
+    customdata=[0, 1, 2, 3],
+    hovertemplate="Cluster %{customdata} Center <extra></extra>",
 )
 
 pc1_pc2_comp = px.scatter(
@@ -188,20 +210,23 @@ pc1_pc2_comp = px.scatter(
     }
 )
 
-umap_fig.update_traces(
-    marker=dict(size=8)
-)
-
-umap_fig.update_layout(
-    hoverlabel=dict(bgcolor='white'),
-)
-
 pc1_pc2_comp.update_traces(
-    marker=dict(size=7)
+    marker=dict(size=8)
 )
 
 pc1_pc2_comp.update_layout(
     hoverlabel=dict(bgcolor='white'),
+)
+
+# add cluster centers to pc1_pc2_comp
+pc1_pc2_comp.add_scatter(
+    x=k_means_fit_data[0][:, 0],
+    y=k_means_fit_data[0][:, 1],
+    mode="markers",
+    marker=dict(size=16, color="black", symbol="star"),
+    name="Cluster Centers",
+    customdata=[0, 1, 2, 3],
+    hovertemplate="Cluster %{customdata} Center <extra></extra>",
 )
 
 umap_fig.write_html("data/wr_clusters_interactive_default.html")
