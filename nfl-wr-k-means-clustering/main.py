@@ -173,6 +173,7 @@ umap_fig.update_layout(
 )
 
 #add cluster centers to umap_fig
+
 umap_fig.add_scatter(
     x=centers_umap[:, 0],
     y=centers_umap[:, 1],
@@ -181,6 +182,7 @@ umap_fig.add_scatter(
     name="Cluster Centers",
     customdata=[0, 1, 2, 3],
     hovertemplate="Cluster %{customdata} Center <extra></extra>",
+    showlegend=False,
 )
 
 pc1_pc2_comp = px.scatter(
@@ -227,6 +229,7 @@ pc1_pc2_comp.add_scatter(
     name="Cluster Centers",
     customdata=[0, 1, 2, 3],
     hovertemplate="Cluster %{customdata} Center <extra></extra>",
+    showlegend=False,
 )
 
 umap_fig.write_html("data/wr_clusters_interactive_default.html")
