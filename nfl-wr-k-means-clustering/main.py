@@ -160,16 +160,17 @@ umap_fig = px.scatter(
     labels={
         "UMAP1": "UMAP 1",
         "UMAP2": "UMAP 2",
-        
     }
 )
 
 umap_fig.update_traces(
-    marker=dict(size=8)
+    marker=dict(size=8),
+    legendgroup="clusters",
 )
 
 umap_fig.update_layout(
     hoverlabel=dict(bgcolor='white'),
+    legend_tracegroupgap=28
 )
 
 #add cluster centers to umap_fig
@@ -182,7 +183,8 @@ umap_fig.add_scatter(
     name="Cluster Centers",
     customdata=[0, 1, 2, 3],
     hovertemplate="Cluster %{customdata} Center <extra></extra>",
-    showlegend=False,
+    showlegend=True,
+    legendgroup="centers",
 )
 
 pc1_pc2_comp = px.scatter(
@@ -213,11 +215,13 @@ pc1_pc2_comp = px.scatter(
 )
 
 pc1_pc2_comp.update_traces(
-    marker=dict(size=8)
+    marker=dict(size=8),
+    legendgroup="clusters"
 )
 
 pc1_pc2_comp.update_layout(
     hoverlabel=dict(bgcolor='white'),
+    legend_tracegroupgap=28
 )
 
 # add cluster centers to pc1_pc2_comp
@@ -229,7 +233,8 @@ pc1_pc2_comp.add_scatter(
     name="Cluster Centers",
     customdata=[0, 1, 2, 3],
     hovertemplate="Cluster %{customdata} Center <extra></extra>",
-    showlegend=False,
+    showlegend=True,
+    legendgroup="centers",
 )
 
 umap_fig.write_html("data/wr_clusters_interactive_default.html")
