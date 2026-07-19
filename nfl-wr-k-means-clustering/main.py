@@ -219,34 +219,37 @@ pc1_pc2_comp = px.scatter(
     labels={
         "PC1": "PC1 - Measure of Speed and Explosiveness",
         "PC2": "PC2 - Measure of Size/Frame",
-    }
+    },
+    render_mode="svg"
 )
 
 pc1_pc2_comp.update_traces(
     marker=dict(size=8),
-    legendgroup="clusters"
+    legendgroup="clusters",
+    legendgrouptitle_text="Clusters:"
 )
+pc1_pc2_centers_fig = px.scatter(
+    x=k_means_fit_data[0][:, 0],
+    y=k_means_fit_data[0][:, 1],
+    color=[f"Cluster Center {i}" for i in range(4)]
+)
+
+pc1_pc2_centers_fig.update_traces(
+    marker=dict(size=20, symbol="star", line=dict(width=2, color="black")),
+    hovertemplate="%{fullData.name}<extra></extra>",
+    legendgroup="centers",
+    legendgrouptitle_text="Cluster Centers:"
+)
+
+pc1_pc2_comp.add_traces(list(pc1_pc2_centers_fig.data))
+
+pc1_pc2_comp.data = pc1_pc2_comp.data[-4:] + pc1_pc2_comp.data[:-4]
 
 pc1_pc2_comp.update_layout(
     hoverlabel=dict(bgcolor='white'),
     legend_tracegroupgap=24,
     legend_title_text="Legend"
 )
-
-# add cluster centers to pc1_pc2_comp
-pc1_pc2_comp.add_scatter(
-    x=k_means_fit_data[0][:, 0],
-    y=k_means_fit_data[0][:, 1],
-    mode="markers",
-    marker=dict(size=16, color="black", symbol="star"),
-    name="Cluster Centers",
-    customdata=[0, 1, 2, 3],
-    hovertemplate="Cluster %{customdata} Center <extra></extra>",
-    showlegend=True,
-    legendgroup="centers",
-)
-
-
 
 umap_fig.write_html("data/wr_clusters_interactive_default.html")
 pc1_pc2_comp.write_html("data/wr_clusters_pc1_vs_pc2.html")
