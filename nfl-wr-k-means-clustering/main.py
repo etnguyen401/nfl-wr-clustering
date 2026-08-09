@@ -58,6 +58,7 @@ def get_combine_data() -> pd.DataFrame:
     combine_data = combine_data.astype(combine_data_types)
 
     #calculate height in terms of inches
+    combine_data["ht_ft_in"] = combine_data["ht"]
     combine_data["ht"] = combine_data["ht-ft"] * 12.0 + combine_data["ht-in"]
 
     #remove unneeded cols
@@ -178,7 +179,7 @@ def build_figure(
         x_column: False,
         y_column: False,
         "cluster": False,
-        "ht": ":.2f",
+        "ht_ft_in": True,
         "wt": ":.2f",
         "forty": ":.2f",
         "vertical": ":.2f",
