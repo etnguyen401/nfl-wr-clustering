@@ -9,7 +9,7 @@ the clusters representing different types of receivers.
 - Clusters players with k-means
 - Generates interactive HTML plots for the cluster results
 
-## Mini Report
+## Methodology & Results
 Firstly, I got the combine data from all of the players from nflreadpy. The columns that will be used to group wide receivers together into clusters will be measurables from the NFL Combine: height, weight, forty time, vertical, bench, broad jump, cone, and shuttle. 
 
 A summary of how these measurables affect a wide receiver:
@@ -24,7 +24,7 @@ Afterwards, I converted the height column from ft and inches to just inches, and
 
 Then, the data is imputed so that all of the missing drills or measurements that the players are missing are filled to give a statistical estimate. This is done using either k-nearest neighbours or other methods. In this case, I used iterative imputation and Random Forest Regressor to find patterns along the features and uses them to fill in the missing values.
 
-Subsequently, because there is so much overlapping variables to take in from the players we then perform PCA Analysis on all of our data to make new predictor variables that are independent. Each of these principal components explains a certain percentage of the variability within the data.
+Because there is so much overlapping variables to take in from the players we then perform PCA Analysis on all of our data to make new predictor variables that are independent. Each of these principal components explains a certain percentage of the variability within the data.
 
 After doing the PCA:
 We can then create a rotation matrix that shows how each of the PC variables weights our data used:
@@ -40,11 +40,11 @@ We can then create a rotation matrix that shows how each of the PC variables wei
 | cone_scaled   |  0.332729 | -0.002180 |  0.593606 |  0.216564 |
 | shuttle_sc    |  0.329942 |  0.003259 |  0.619233 |  -0.22346 |
 
-For example, PC1 weights the forty time, vertical, broad jump, three cone, and shuttle the heaviest. As PC1 increases, the fourty time increases, vertical decreases, broad jump distance decreases, and time it takes to complete the shuttle and cone increases, giving a slower, less explosive and athletic player. if PC1 decreases, you have a faster, more explosive and athletic player.
+For example, PC1 weights the forty time, vertical, broad jump, three cone, and shuttle the heaviest. As PC1 increases, the forty time increases, vertical decreases, broad jump distance decreases, and time it takes to complete the shuttle and cone increases, giving a slower, less explosive and athletic player. if PC1 decreases, you have a faster, more explosive and athletic player.
 
 PC2 heavily weights the weight and height positively, so a large PC2 value represents a player with a much bigger frame, while small PC2 values repesents a player with a smaller frame.
 
-PC3 weights the shuttle, cone, and fourty time drills the most. This separates players who mainly have straight line speed vs those who can accelerate in and out of breaks, and have good change of directions skills. A low PC3 value means someone with better lateral movement but slower, whereas a high PC3 value means someone faster with worse lateral movement.
+PC3 weights the shuttle, cone, and forty time drills the most. This separates players who mainly have straight line speed vs those who can accelerate in and out of breaks, and have good change of directions skills. A low PC3 value means someone with better lateral movement but slower, whereas a high PC3 value means someone faster with worse lateral movement.
 
 PC4 weights the bench, forty time, and height. A high PC4 value corresponds to the shorter, slower, and stockier players whereas a low PC4 value corresponds to the faster, taller, and weaker player.
 
@@ -57,7 +57,15 @@ We also can show how much variance that each PC variable explains. Explaining 80
 | PC3 |           0.819527 |                 0.122959 |
 | PC4 |           0.624784 |                 0.093741 |
 
-Then using the PC variables, we can use k-means clustering to categorize the wide receivers into different clusters. For now, I chose to categorize into four different clusters. As we see each player gets matched with which cluster they belong to and the average values of the PC scores of the each cluster center, we can explain what type of wide receiver each cluster describes. Cluster 0 contains those who are athletic freaks. These are receivers who are heavy while still being fast and explosive, and usually slotted as your prototypical X. Examples of players would be DK Metcalf, Julio Jones, Xavier Legette. Those in cluster 1 are the speedy, shorter, lighter, explosive wide receivers like Xavier Worthy, Marquise Brown, Tyquan Thornton. Often, these are the players who are deep threats. Cluster 2 are wide receivers who are slower, but aren't very heavy and not as explosive. This contains players like Hunter Renfrow, Cooper Kupp, and Anquan Boldin. Cluster 3 contain the wide receivers who are bigger and taller, but are also less explosive and less athletic. Think DeAndre Hopkins or Elijah Sarratt from the current draft.
+Then using the PC variables, we can use k-means clustering to categorize the wide receivers into different clusters. For now, I chose to categorize into four different clusters. As we see each player gets matched with which cluster they belong to and the average values of the PC scores of the each cluster center, we can explain what type of wide receiver each cluster describes. 
+
+Cluster 0 contains those who are athletic anomalies. These are receivers who are heavy while still being fast and explosive, and usually slotted as your prototypical X. Examples of players would be DK Metcalf, Julio Jones, Xavier Legette. 
+
+Those in cluster 1 are the speedy, shorter, lighter, explosive wide receivers like Xavier Worthy, Marquise Brown, Tyquan Thornton. Often, these are the players who are deep threats. 
+
+Cluster 2 are wide receivers who are slower, but aren't very heavy and not as explosive. This contains players like Hunter Renfrow, Cooper Kupp, and Anquan Boldin. 
+
+Cluster 3 contain the wide receivers who are bigger and taller, but are also less explosive and less athletic. Think DeAndre Hopkins or Elijah Sarratt from the current draft.
 
 Then, we need to use UMAP to visualize these clusters into 2D space. Here is the result:
 
