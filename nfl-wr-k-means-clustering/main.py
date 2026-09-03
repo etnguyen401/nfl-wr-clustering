@@ -21,6 +21,7 @@ IMPUTED_DATA_PATH = DATA_DIR / "combine_data_wr_post_clean_imputed.csv"
 CLUSTER_CENTERS_PATH = DATA_DIR / "cluster_centers.csv"
 ROTATION_PATH = DATA_DIR / "pca_rotation_matrix.csv"
 PCA_VARIANCE_PATH = DATA_DIR / "pca_explained_variance.csv"
+UMAP_POSITIONS_PATH = DATA_DIR / "umap_positions.csv"
 UMAP_HTML_PATH = DATA_DIR / "wr_clusters_interactive_default.html"
 PC1_PC2_HTML_PATH = DATA_DIR / "wr_clusters_pc1_vs_pc2.html"
 N_CLUSTERS = 4
@@ -138,7 +139,7 @@ def get_clusters(combine_data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
     # check if cluster column already exists in dataframe and if so, return the dataframe and the cluster centers
     if "cluster" in combine_data.columns and CLUSTER_CENTERS_PATH.exists():
         print("Cluster column already exists in dataframe and cluster centers file exists, loading from CSV...")
-        cluster_centers_df = pd.read_csv(CLUSTER_CENTERS_PATH, index_col=0)
+        cluster_centers_df = pd.read_csv(CLUSTER_CENTERS_PATH)
 
         return combine_data, cluster_centers_df
 
@@ -157,28 +158,71 @@ def get_clusters(combine_data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
     cluster_centers_df = pd.DataFrame(
         k_means_fit_data[0],
         columns=["PC1", "PC2", "PC3", "PC4"],
-        index=[f"Cluster {i}" for i in range(N_CLUSTERS)],
     )
-    cluster_centers_df.to_csv(CLUSTER_CENTERS_PATH, index=True)
+
+    cluster_centers_df.insert(0, "Cluster #", [f"Cluster {i} Center Average Stats" for i in range(N_CLUSTERS)])
+
+    cluster_centers_df.to_csv(CLUSTER_CENTERS_PATH, index=False)
 
     return combine_data, cluster_centers_df
 
-def build_figure(
-    data: pd.DataFrame,
-    x_column: str,
-    y_column: str,
-    title: str,
-    x_label: str,
-    y_label: str,
-    center_points: pd.DataFrame,
-):
-    # data = data.copy()
-    data["cluster"] = data["cluster"].astype(str)
-    cluster_values = sorted(data["cluster"].unique())
+def get_cluster_avg_values(combine_data: pd.DataFrame, cluster_centers: pd.DataFrame) -> pd.DataFrame:
+    # check if cluster centers file exists and all columns to impute and draft_ovr exist in the dataframe
+    if CLUSTER_CENTERS_PATH.exists() and all(col in cluster_centers.columns for col in cols_to_impute + ["draft_ovr", "ht_ft_in"]):
+        print("Cluster centers file exists and all columns to impute and draft_ovr exist in dataframe, loading cluster avg values from CSV...")
+        cluster_centers_df = pd.read_csv(CLUSTER_CENTERS_PATH)
+        return cluster_centers_df
+
+    print("Calculating average values for each feature for each cluster...")
+    cluster_avg_values = combine_data.groupby("cluster")[cols_to_impute + ["draft_ovr"]].mean().round(2)
+    
+    cluster_avg_values.index = cluster_centers.index
+    #split height into feet and inches
+    
+    cluster_ht_ft = (cluster_avg_values["ht"] // 12).astype(int)
+    cluster_ht_in = (cluster_avg_values["ht"] % 12).astype(int)
+    
+    cluster_avg_values["ht_ft_in"] = cluster_ht_ft.astype(str) + "-" + cluster_ht_in.astype(str)
+    cluster_avg_values.drop(["ht"], axis=1, inplace=True)
+    # combine cluster centers with cluster avg values
+    cluster_centers = pd.concat([cluster_centers, cluster_avg_values], axis=1)
+
+    # write combined cluster centers and avg values to csv
+    cluster_centers.to_csv(CLUSTER_CENTERS_PATH, index=False)
+    
+    return cluster_centers
+
+def get_umap_positions(combine_data: pd.DataFrame, cluster_centers: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if all(col in combine_data.columns for col in ["UMAP1", "UMAP2"]):
+        print("UMAP columns already exist in dataframe, skipping imputation...")
+        return combine_data, cluster_centers
+
+    print("Calculating UMAP positions for combine data...")
+    reducer = umap.UMAP(random_state=RANDOM_STATE)
+    umap_positions = reducer.fit_transform(combine_data[["PC1", "PC2", "PC3", "PC4"]])
+    # umap_positions_df = pd.DataFrame(umap_positions, columns=["UMAP1", "UMAP2"])
+    combine_data["UMAP1"] = umap_positions[:, 0]
+    combine_data["UMAP2"] = umap_positions[:, 1]
+
+    # get cluster centers in UMAP space
+    centers_umap = reducer.transform(cluster_centers[["PC1", "PC2", "PC3", "PC4"]])
+
+    # combine existing cluster center data with UMAP positions
+    cluster_centers["UMAP1"] = centers_umap[:, 0]
+    cluster_centers["UMAP2"] = centers_umap[:, 1]
+
+    # save to csv
+    combine_data.to_csv(COMBINE_DATA_PATH, index=False)
+    cluster_centers.to_csv(CLUSTER_CENTERS_PATH, index=False)
+
+    return combine_data, cluster_centers
+
+
+def get_hover_data(x_column: str, y_column: str, for_centers: bool = False) -> dict:
     hover_data = {
         x_column: False,
         y_column: False,
-        "cluster": False,
+        "draft_ovr": True,
         "ht_ft_in": True,
         "wt": ":.2f",
         "forty": ":.2f",
@@ -188,6 +232,45 @@ def build_figure(
         "cone": ":.2f",
         "shuttle": ":.2f",
     }
+
+    if for_centers:
+        hover_data.update(
+            {
+                "Cluster #": False,
+                "UMAP1": False,
+                "UMAP2": False,
+                "PC1": False,
+                "PC2": False,
+                "PC3": False,
+                "PC4": False,
+            }
+        )
+    else:
+        hover_data.update(
+            {
+                "cluster": False,
+                "draft_year": True,
+                "draft_team": True,
+                "draft_round": True,
+            }
+        )
+
+    return hover_data
+
+
+def build_figure(
+    data: pd.DataFrame,
+    x_column: str,
+    y_column: str,
+    title: str,
+    x_label: str,
+    y_label: str,
+    center_data: pd.DataFrame,
+):
+    # data = data.copy()
+    data["cluster"] = data["cluster"].astype(str)
+    cluster_values = sorted(data["cluster"].unique())
+    hover_data = get_hover_data(x_column, y_column)
 
     figure = px.scatter(
         data,
@@ -209,16 +292,19 @@ def build_figure(
     )
 
     #create centers
-    center_labels = [f"Cluster {i} Center" for i in range(len(center_points))]
+    center_labels = [f"Cluster {i} Center" for i in range(len(center_data))]
     center_figure = px.scatter(
-        x=center_points[x_column],
-        y=center_points[y_column],
-        color=center_labels,
+        center_data,
+        x=center_data[x_column],
+        y=center_data[y_column],
+        hover_name="Cluster #",
+        hover_data=get_hover_data(x_column, y_column, for_centers=True),
+        color="Cluster #",
     )
 
     center_figure.update_traces(
         marker=dict(size=20, symbol="star", line=dict(width=2, color="black")),
-        hovertemplate="%{fullData.name}<extra></extra>",
+        # hovertemplate="%{fullData.name}<extra></extra>",
         legendgroup="centers",
         legendgrouptitle_text="Cluster Centers:",
     )
@@ -245,40 +331,41 @@ def run_pipeline() -> None:
     print(f"Explained variance:\n{explained_variance}")
 
     combine_data_clustered, cluster_centers = get_clusters(combine_data_with_pca)
-    print(f"Cluster centers:\n{cluster_centers}")
 
-    print("Average values for each PC for each cluster:")
-    print(combine_data_clustered.groupby("cluster")[["PC1", "PC2", "PC3", "PC4"]].mean().round(2))
+    print(f"\nCluster centers:\n{cluster_centers}")
 
+    cluster_avg_values = get_cluster_avg_values(combine_data_clustered, cluster_centers)
     print("Average values for each feature for each cluster:")
-    print(combine_data_clustered.groupby("cluster")[cols_to_impute].mean().round(2))
+    print(cluster_avg_values)
 
-    reducer = umap.UMAP(random_state=RANDOM_STATE)
-    umap_positions = reducer.fit_transform(combine_data_clustered[["PC1", "PC2", "PC3", "PC4"]])
-    centers_umap = reducer.transform(cluster_centers)
-    centers_umap_df = pd.DataFrame(centers_umap, columns=["UMAP1", "UMAP2"])
+    # reducer = umap.UMAP(random_state=RANDOM_STATE)
+    # umap_positions = reducer.fit_transform(combine_data_clustered[["PC1", "PC2", "PC3", "PC4"]])
+    # centers_umap = reducer.transform(cluster_centers)
+    # centers_umap_df = pd.DataFrame(centers_umap, columns=["UMAP1", "UMAP2"])
 
-    combine_data_clustered["UMAP1"] = umap_positions[:, 0]
-    combine_data_clustered["UMAP2"] = umap_positions[:, 1]
+    # combine_data_clustered["UMAP1"] = umap_positions[:, 0]
+    # combine_data_clustered["UMAP2"] = umap_positions[:, 1]
+
+    combine_data_umap, centers_umap_df = get_umap_positions(combine_data_clustered, cluster_avg_values)
 
     umap_fig = build_figure(
-        combine_data_clustered,
+        combine_data_umap,
         x_column="UMAP1",
         y_column="UMAP2",
         title="Wide Receiver Clusters (UMAP)",
         x_label="UMAP 1",
         y_label="UMAP 2",
-        center_points=centers_umap_df,
+        center_data=centers_umap_df,
     )
 
     pc1_pc2_comp = build_figure(
-        combine_data_clustered,
+        combine_data_umap,
         x_column="PC1",
         y_column="PC2",
         title="Speed/Explosiveness vs Size/Frame (PC1 vs PC2)",
         x_label="PC1 - Measure of Speed and Explosiveness",
         y_label="PC2 - Measure of Size/Frame",
-        center_points=cluster_centers[["PC1", "PC2"]],
+        center_data=centers_umap_df,
     )
 
     umap_fig.write_html(UMAP_HTML_PATH)
