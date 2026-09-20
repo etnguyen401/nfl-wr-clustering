@@ -170,8 +170,7 @@ def get_cluster_avg_values(combine_data: pd.DataFrame, cluster_centers: pd.DataF
     # check if cluster centers file exists and all columns to impute and draft_ovr exist in the dataframe
     if CLUSTER_CENTERS_PATH.exists() and all(col in cluster_centers.columns for col in cols_to_impute + ["draft_ovr", "ht_ft_in"]):
         print("Cluster centers file exists and all columns to impute and draft_ovr exist in dataframe, loading cluster avg values from CSV...")
-        cluster_centers_df = pd.read_csv(CLUSTER_CENTERS_PATH)
-        return cluster_centers_df
+        return cluster_centers
 
     print("Calculating average values for each feature for each cluster...")
     cluster_avg_values = combine_data.groupby("cluster")[cols_to_impute + ["draft_ovr"]].mean().round(2)
@@ -183,7 +182,7 @@ def get_cluster_avg_values(combine_data: pd.DataFrame, cluster_centers: pd.DataF
     cluster_ht_in = (cluster_avg_values["ht"] % 12).astype(int)
     
     cluster_avg_values["ht_ft_in"] = cluster_ht_ft.astype(str) + "-" + cluster_ht_in.astype(str)
-    cluster_avg_values.drop(["ht"], axis=1, inplace=True)
+    # cluster_avg_values.drop(["ht"], axis=1, inplace=True)
     # combine cluster centers with cluster avg values
     cluster_centers = pd.concat([cluster_centers, cluster_avg_values], axis=1)
 
@@ -193,7 +192,7 @@ def get_cluster_avg_values(combine_data: pd.DataFrame, cluster_centers: pd.DataF
     return cluster_centers
 
 def get_umap_positions(combine_data: pd.DataFrame, cluster_centers: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    if all(col in combine_data.columns for col in ["UMAP1", "UMAP2"]):
+    if all(col in combine_data.columns and col in cluster_centers.columns for col in ["UMAP1", "UMAP2"]):
         print("UMAP columns already exist in dataframe, skipping imputation...")
         return combine_data, cluster_centers
 
@@ -266,6 +265,7 @@ def build_figure(
     x_label: str,
     y_label: str,
     center_data: pd.DataFrame,
+    rotation_data: pd.DataFrame | None = None,
 ):
     # data = data.copy()
     data["cluster"] = data["cluster"].astype(str)
@@ -311,6 +311,58 @@ def build_figure(
 
     figure.add_traces(list(center_figure.data))
     figure.data = figure.data[-len(center_labels):] + figure.data[:-len(center_labels)]
+
+    if rotation_data is not None:
+        x_span = data[x_column].max() - data[x_column].min()
+        y_span = data[y_column].max() - data[y_column].min()
+        max_arrow_len = 0.45 * min(x_span, y_span)
+        max_weight = max(
+            rotation_data[x_column].abs().max(),
+            rotation_data[y_column].abs().max(),
+        )
+        # normalize the arrow lengths based on the maximum weight to ensure they fit within the plot
+        if max_weight > 0:
+            max_arrow_len /= max_weight
+
+        for variable_name, row_data in rotation_data.iterrows():
+            len_x = row_data[x_column] * max_arrow_len
+            len_y = row_data[y_column] * max_arrow_len
+
+            label_x = len_x
+            label_y = len_y
+
+            figure.add_annotation(
+                x=len_x,
+                y=len_y,
+                ax=0,
+                ay=0,
+                xref="x",
+                yref="y",
+                axref="x",
+                ayref="y",
+                showarrow=True,
+                arrowhead=3,
+                arrowsize=1,
+                arrowwidth=2,
+                arrowcolor="black",
+                text="",
+            )
+
+            figure.add_annotation(
+                x=label_x,
+                y=label_y,
+                xref="x",
+                yref="y",
+                showarrow=False,
+                text=variable_name.replace("_scaled", ""),
+                font=dict(size=11, color="black"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="gray",
+                borderwidth=1,
+                xanchor="left",
+                yanchor="bottom",
+            )
+            
     figure.update_layout(
         hoverlabel=dict(bgcolor="white"),
         legend_tracegroupgap=24,
@@ -366,6 +418,7 @@ def run_pipeline() -> None:
         x_label="PC1 - Measure of Speed and Explosiveness",
         y_label="PC2 - Measure of Size/Frame",
         center_data=centers_umap_df,
+        rotation_data=rotation[["PC1", "PC2"]],
     )
 
     umap_fig.write_html(UMAP_HTML_PATH)
