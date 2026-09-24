@@ -348,6 +348,10 @@ def build_figure(
                 text="",
             )
 
+            # if variable is cone, move label down a bit so it doesn't overlap with shuttle label
+            if variable_name == "cone_scaled":
+                label_y -= 0.03 * y_span
+
             figure.add_annotation(
                 x=label_x,
                 y=label_y,
